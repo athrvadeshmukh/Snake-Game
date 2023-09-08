@@ -2,6 +2,7 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 
 public class SnakeGame extends JPanel implements KeyListener {
@@ -17,6 +18,7 @@ public class SnakeGame extends JPanel implements KeyListener {
     private boolean gameRunning;
     private int score;
     private Timer obstacleTimer;
+    private HashMap<Point, Long> obstacleCreationTimes;
 
     public SnakeGame() {
         snake = new ArrayList<>();
@@ -27,6 +29,7 @@ public class SnakeGame extends JPanel implements KeyListener {
         gameOver = false;
         gameRunning = true;
         score = 0;
+        obstacleCreationTimes = new HashMap<>();
 
         setPreferredSize(new Dimension(GRID_SIZE * GRID_WIDTH, GRID_SIZE * GRID_HEIGHT));
         setBackground(Color.BLACK);
@@ -112,7 +115,25 @@ public class SnakeGame extends JPanel implements KeyListener {
         int x = random.nextInt(GRID_WIDTH);
         int y = random.nextInt(GRID_HEIGHT);
         obstacles.add(new Point(x, y));
+        obstacleCreationTimes.put(new Point(x, y), System.currentTimeMillis());
         repaint();
+    }
+
+    private void removeOldObstacles() {
+        long currentTime = System.currentTimeMillis();
+        ArrayList<Point> obstaclesToRemove = new ArrayList<>();
+
+        for (Point obstacle : obstacles) {
+            Long creationTime = obstacleCreationTimes.get(obstacle);
+            if (creationTime != null && currentTime - creationTime > 5000) {
+                obstaclesToRemove.add(obstacle);
+            }
+        }
+
+        for (Point obstacle : obstaclesToRemove) {
+            obstacles.remove(obstacle);
+            obstacleCreationTimes.remove(obstacle);
+        }
     }
 
     @Override
@@ -126,6 +147,7 @@ public class SnakeGame extends JPanel implements KeyListener {
             }
 
             g.setColor(Color.RED);
+            removeOldObstacles(); // Remove old obstacles before painting
             for (Point obstacle : obstacles) {
                 g.fillRect(obstacle.x * GRID_SIZE, obstacle.y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
             }
@@ -164,6 +186,7 @@ public class SnakeGame extends JPanel implements KeyListener {
         snake.clear();
         snake.add(new Point(GRID_WIDTH / 2, GRID_HEIGHT / 2));
         obstacles.clear();
+        obstacleCreationTimes.clear();
         food = createFood();
         direction = KeyEvent.VK_RIGHT;
         gameOver = false;
